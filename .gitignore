@@ -1,0 +1,10 @@
+*.tar
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.pth
+/src/datasets/*
+/src/model_data/*
