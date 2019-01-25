@@ -154,8 +154,6 @@ pyasn1-modules==0.2.2
 pycodestyle==2.4.0
 pycosat==0.6.3
 pycparser==2.18
-pycrypto==2.6.1
-pycryptodome==3.7.2
 pycurl==7.43.0.2
 pyflakes==2.0.0
 Pygments==2.2.0
@@ -216,7 +214,7 @@ terminado==0.8.1
 testpath==0.3.1
 thinc==6.12.0
 toolz==0.9.0
-torch==0.4.1
+torch==1.0.0
 torchvision==0.2.1
 tornado==5.1
 tqdm==4.26.0
