@@ -139,12 +139,11 @@ class DummyNode(object):
 
 def UCT_search(game_state, num_reads,net):
     root = UCTNode(game_state, move=None, parent=DummyNode())
-    chessnet = net
     for i in range(num_reads):
         leaf = root.select_leaf()
         encoded_s = ed.encode_board(leaf.game); encoded_s = encoded_s.transpose(2,0,1)
         encoded_s = torch.from_numpy(encoded_s).float().cuda()
-        child_priors, value_estimate = chessnet(encoded_s)
+        child_priors, value_estimate = net(encoded_s)
         child_priors = child_priors.detach().cpu().numpy().reshape(-1); value_estimate = value_estimate.item()
         #print(len(child_priors),value_estimate)
         if leaf.game.check_status() == True and leaf.game.in_check_possible_moves() == []: # if checkmate

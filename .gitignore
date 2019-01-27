@@ -8,3 +8,4 @@
 *.pth
 /src/datasets/*
 /src/model_data/*
+/src/evaluator_data/*

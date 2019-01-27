@@ -12,7 +12,7 @@ import pickle
 import torch.multiprocessing as mp
 
 def save_as_pickle(filename, data):
-    completeName = os.path.join("./datasets/evaluator_data/",\
+    completeName = os.path.join("./evaluator_data/",\
                                 filename)
     with open(completeName, 'wb') as output:
         pickle.dump(data, output)

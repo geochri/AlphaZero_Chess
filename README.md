@@ -1,23 +1,23 @@
-# AlphaGoZero_Chess
-# From-scratch implementation of AlphaGoZero for Chess
+# AlphaZero_Chess
+# From-scratch implementation of AlphaZero for Chess
 
-This repo demonstrates an implementation of AlphaGoZero framework for Chess, using python and PyTorch.
+This repo demonstrates an implementation of AlphaZero framework for Chess, using python and PyTorch.
 
 We all know that AlphaGo created a big stir when it defeated reigning world champion Lee Sedol in the game of Go in 2016, hence becoming the first computer program to achieve superhuman performance in an ultra-complicated game. 
 
 However, AlphaGoZero, published (https://www.nature.com/articles/nature24270) a year later in 2017, push boundaries one big step further by achieving a similar feat without any human data inputs. A subsequent paper (https://arxiv.org/abs/1712.01815) released by the same group Deepmind successfully applied the same reinforcement learning + supervised learning framework to chess, outperforming the previous best chess program Stockfish after just 4 hours of training.
 
-Inspired by the power of such supervised reinforcement learning models, I embarked on my own learning journey to build my own chess AI program from scratch, closely following the methods as described in the papers above.
+Inspired by the power of such supervised reinforcement learning models, I created a repository to build my own chess AI program from scratch, closely following the methods as described in the papers above.
 
 # Contents
-In this repo, you will find the following core scripts:
+In this repository, you will find the following core scripts:
 
-1) MCTS_chess.py - implements the Monte-Carlo Tree Search (MCTS) algorithm based on Polynomial Upper Confience Trees (PUCT) method for leaf transversal. This generates datasets (state, policy, value) for neural network training
+1) MCTS_chess.py - implements the Monte-Carlo Tree Search (MCTS) algorithm based on Polynomial Upper Confidence Trees (PUCT) method for leaf transversal. This generates datasets (state, policy, value) for neural network training
 
 2) alpha_net.py - PyTorch implementation of the AlphaGoZero neural network architecture, with slightly reduced number of residual blocks and convolution channels for faster computation. The network consists of, in order:
 - A convolution block with batch normalization
 - 13 residual blocks with each block consisting of two convolutional layers with batch normalization
-- output block with two heads: a policy output head that consists of convolutional layer with batch normalization followed by logsoftmax, and a value head that consists of a convolutional layer with relu and tanh activation.
+- An output block with two heads: a policy output head that consists of convolutional layer with batch normalization followed by logsoftmax, and a value head that consists of a convolutional layer with relu and tanh activation.
 
 3) chess_board.py – Implementation of a chess board python class with all game rules and possible moves
 
