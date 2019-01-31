@@ -194,7 +194,7 @@ def load_pickle(filename):
 
 
 def MCTS_self_play(chessnet,num_games,cpu):
-    for idxx in range(num_games):
+    for idxx in range(5,num_games):
         current_board = c_board()
         checkmate = False
         dataset = [] # to get state, policy, value for neural network training

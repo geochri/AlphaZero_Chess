@@ -5,8 +5,11 @@ import os
 import pickle
 import numpy as np
 import torch
+import torch.multiprocessing as mp
 
-def train_chessnet(net_to_train="current_net_trained.pth.tar",save_as="current_net_trained2.pth.tar"):
+
+if __name__=="__main__":
+    net_to_train="current_net.pth.tar"; save_as="current_net_trained.pth.tar"
     # gather data
     data_path = "./datasets/iter0/"
     datasets = []
@@ -16,19 +19,27 @@ def train_chessnet(net_to_train="current_net_trained.pth.tar",save_as="current_n
             datasets.extend(pickle.load(fo, encoding='bytes'))
     datasets = np.array(datasets)
     
-    # train net
+    # initiate Net
+    mp.set_start_method("spawn",force=True)
     net = ChessNet()
     cuda = torch.cuda.is_available()
     if cuda:
         net.cuda()
+    net.share_memory()
+    net.train()
+    print("hi")
     current_net_filename = os.path.join("./model_data/",\
                                     net_to_train)
     checkpoint = torch.load(current_net_filename)
     net.load_state_dict(checkpoint['state_dict'])
-    train(net,datasets)
+    
+    processes = []
+    for i in range(6):
+        p = mp.Process(target=train,args=(net,datasets,0,500,i))
+        p.start()
+        processes.append(p)
+    for p in processes:
+        p.join()
     # save results
     torch.save({'state_dict': net.state_dict()}, os.path.join("./model_data/",\
                                     save_as))
-
-if __name__=="__main__":
-    train_chessnet()

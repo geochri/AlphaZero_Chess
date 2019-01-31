@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
+import os
 
 class board_data(Dataset):
     def __init__(self, dataset): # dataset = np.array of (s, p, v)
@@ -21,8 +22,8 @@ class ConvBlock(nn.Module):
     def __init__(self):
         super(ConvBlock, self).__init__()
         self.action_size = 8*8*73
-        self.conv1 = nn.Conv2d(22, 128, 3, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(128)
+        self.conv1 = nn.Conv2d(22, 256, 3, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(256)
 
     def forward(self, s):
         #s: batch_size x channels X board_x x board_y
@@ -34,7 +35,7 @@ class ConvBlock(nn.Module):
         return s
 
 class ResBlock(nn.Module):
-    def __init__(self, inplanes=128, planes=128, stride=1, downsample=None):
+    def __init__(self, inplanes=256, planes=256, stride=1, downsample=None):
         super(ResBlock, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
@@ -56,15 +57,15 @@ class ResBlock(nn.Module):
 class OutBlock(nn.Module):
     def __init__(self):
         super(OutBlock, self).__init__()
-        self.conv = nn.Conv2d(128, 1, kernel_size=1) # value head
+        self.conv = nn.Conv2d(256, 1, kernel_size=1) # value head
         self.bn = nn.BatchNorm2d(1)
         self.fc1 = nn.Linear(8*8, 64)
         self.fc2 = nn.Linear(64, 1)
         
-        self.conv1 = nn.Conv2d(128, 77, kernel_size=1) # policy head
-        self.bn1 = nn.BatchNorm2d(77)
+        self.conv1 = nn.Conv2d(256, 128, kernel_size=1) # policy head
+        self.bn1 = nn.BatchNorm2d(128)
         self.logsoftmax = nn.LogSoftmax(dim=1)
-        self.fc = nn.Linear(8*8*77, 8*8*73)
+        self.fc = nn.Linear(8*8*128, 8*8*73)
     
     def forward(self,s):
         v = F.relu(self.bn(self.conv(s))) # value head
@@ -73,7 +74,7 @@ class OutBlock(nn.Module):
         v = F.tanh(self.fc2(v))
         
         p = F.relu(self.bn1(self.conv1(s))) # policy head
-        p = p.view(-1, 8*8*77)
+        p = p.view(-1, 8*8*128)
         p = self.fc(p)
         p = self.logsoftmax(p).exp()
         return p, v
@@ -82,13 +83,13 @@ class ChessNet(nn.Module):
     def __init__(self):
         super(ChessNet, self).__init__()
         self.conv = ConvBlock()
-        for block in range(13):
+        for block in range(19):
             setattr(self, "res_%i" % block,ResBlock())
         self.outblock = OutBlock()
     
     def forward(self,s):
         s = self.conv(s)
-        for block in range(13):
+        for block in range(19):
             s = getattr(self, "res_%i" % block)(s)
         s = self.outblock(s)
         return s
@@ -107,10 +108,9 @@ class AlphaLoss(torch.nn.Module):
         #print(value_error); print(policy_error); print(total_error)
         return total_error
     
-def train(net, dataset, epoch_start=0, epoch_stop=500):
+def train(net, dataset, epoch_start=0, epoch_stop=500, cpu=0):
+    torch.manual_seed(cpu)
     cuda = torch.cuda.is_available()
-    if cuda:
-        net.cuda()
     net.train()
     criterion = AlphaLoss()
     optimizer = optim.Adam(net.parameters(), lr=0.01)
@@ -126,7 +126,7 @@ def train(net, dataset, epoch_start=0, epoch_stop=500):
         for i,data in enumerate(train_loader,0):
             state, policy, value = data
             if cuda:
-                state, policy, value = state.cuda().float(), policy.cuda(), value.cuda().float()
+                state, policy, value = state.cuda().float(), policy.float().cuda(), value.cuda().float()
             optimizer.zero_grad()
             # state = torch.Size([batch, 22, 8, 8]); policy = torch.Size([batch, 4672]) # value = torch.Size([batch])
             policy_pred, value_pred = net(state) # policy_pred = torch.Size([batch, 4672]) value_pred = torch.Size([batch, 1])
@@ -136,12 +136,17 @@ def train(net, dataset, epoch_start=0, epoch_stop=500):
             optimizer.step()
             total_loss += loss.item()
             if i % 10 == 9:    # print every 1000 mini-batches of size = batch_size
-                print('[Epoch: %d, %5d/ %d points] total loss per batch: %.3f' %
-                      (epoch + 1, (i + 1)*10, len(train_set), total_loss/10))
+                print('Process ID: %d [Epoch: %d, %5d/ %d points] total loss per batch: %.3f' %
+                      (os.getpid(), epoch + 1, (i + 1)*30, len(train_set), total_loss/10))
+                print("Policy:",policy[0].argmax().item(),policy_pred[0].argmax().item())
+                print("Value:",value[0].item(),value_pred[0,0].item())
                 losses_per_batch.append(total_loss/10)
                 total_loss = 0.0
-
         losses_per_epoch.append(sum(losses_per_batch)/len(losses_per_batch))
+        if len(losses_per_epoch) > 50:
+            if abs(losses_per_epoch[-4:-1]/3-losses_per_epoch[-13:-10]/3) <= 0.03:
+                break
+        
     fig = plt.figure()
     ax = fig.add_subplot(222)
     ax.scatter([e for e in range(1,epoch_stop+1,1)], losses_per_epoch)
@@ -149,4 +154,5 @@ def train(net, dataset, epoch_start=0, epoch_stop=500):
     ax.set_ylabel("Loss per batch")
     ax.set_title("Loss vs Epoch")
     print('Finished Training')
-        
+    
+    
