@@ -10,6 +10,7 @@ import copy
 import torch
 import torch.multiprocessing as mp
 from alpha_net import ChessNet
+import datetime
 
 class UCTNode():
     def __init__(self, game, move, parent=None):
@@ -58,7 +59,6 @@ class UCTNode():
         current = self
         while current.is_expanded:
           best_move = current.best_child()
-          #print("best_move:", best_move)
           current = current.maybe_add_child(best_move)
         return current
     
@@ -74,7 +74,6 @@ class UCTNode():
         for action in self.game.actions(): # possible actions
             if action != []:
                 initial_pos,final_pos,underpromote = action
-                #print(initial_pos,final_pos,underpromote)
                 action_idxs.append(ed.encode_action(self.game,initial_pos,final_pos,underpromote))
         if action_idxs == []:
             self.is_expanded = False
@@ -110,18 +109,15 @@ class UCTNode():
     
     def maybe_add_child(self, move):
         if move not in self.children:
-            #print(move)
             copy_board = copy.deepcopy(self.game) # make copy of board
             copy_board = self.decode_n_move_pieces(copy_board,move)
             self.children[move] = UCTNode(
               copy_board, move, parent=self)
-            #print(copy_board.current_board,self.game.current_board)
         return self.children[move]
     
     def backup(self, value_estimate: float):
         current = self
         while current.parent is not None:
-            #print("branch")
             current.number_visits += 1
             if current.game.player == 1: # same as current.parent.game.player = 0
                 current.total_value += (1*value_estimate) # value estimate +1 = white win
@@ -145,12 +141,10 @@ def UCT_search(game_state, num_reads,net):
         encoded_s = torch.from_numpy(encoded_s).float().cuda()
         child_priors, value_estimate = net(encoded_s)
         child_priors = child_priors.detach().cpu().numpy().reshape(-1); value_estimate = value_estimate.item()
-        #print(len(child_priors),value_estimate)
         if leaf.game.check_status() == True and leaf.game.in_check_possible_moves() == []: # if checkmate
             leaf.backup(value_estimate); continue
         leaf.expand(child_priors) # need to make sure valid moves
         leaf.backup(value_estimate)
-        #print(i)
     return np.argmax(root.child_number_visits), root
 
 def do_decode_n_move_pieces(board,move):
@@ -180,7 +174,7 @@ def get_policy(root):
     return policy
 
 def save_as_pickle(filename, data):
-    completeName = os.path.join("./datasets/",\
+    completeName = os.path.join("./datasets/iter2/",\
                                 filename)
     with open(completeName, 'wb') as output:
         pickle.dump(data, output)
@@ -194,7 +188,7 @@ def load_pickle(filename):
 
 
 def MCTS_self_play(chessnet,num_games,cpu):
-    for idxx in range(5,num_games):
+    for idxx in range(0,num_games):
         current_board = c_board()
         checkmate = False
         dataset = [] # to get state, policy, value for neural network training
@@ -229,13 +223,13 @@ def MCTS_self_play(chessnet,num_games,cpu):
             else:
                 dataset_p.append([s,p,value])
         del dataset
-        save_as_pickle("dataset_cpu%i_%i" % (cpu,idxx),dataset_p)
+        save_as_pickle("dataset_cpu%i_%i_%s" % (cpu,idxx, datetime.datetime.today().strftime("%Y-%m-%d")),dataset_p)
 
 
     
 if __name__=="__main__":
     
-    net_to_play="current_net.pth.tar"
+    net_to_play="current_net_trained8_iter1.pth.tar"
     mp.set_start_method("spawn",force=True)
     net = ChessNet()
     cuda = torch.cuda.is_available()
@@ -251,8 +245,6 @@ if __name__=="__main__":
                                     net_to_play)
     checkpoint = torch.load(current_net_filename)
     net.load_state_dict(checkpoint['state_dict'])
-    #with mp.Pool(processes=4) as pool:
-    #    pool.starmap(MCTS_self_play,zip(repeat(net),range(50)))
     processes = []
     for i in range(6):
         p = mp.Process(target=MCTS_self_play,args=(net,50,i))
@@ -260,12 +252,3 @@ if __name__=="__main__":
         processes.append(p)
     for p in processes:
         p.join()
-
-    
-    
-    
-'''
-from visualize_board import view_board
-for data_board in dataset_p:
-    view_board(ed.decode_board(data_board[0]).current_board)
-'''

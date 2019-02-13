@@ -9,9 +9,9 @@ import torch.multiprocessing as mp
 
 
 if __name__=="__main__":
-    net_to_train="current_net.pth.tar"; save_as="current_net_trained.pth.tar"
+    net_to_train="current_net_trained2.pth.tar"; save_as="current_net_trained_iter1.pth.tar"
     # gather data
-    data_path = "./datasets/iter0/"
+    data_path = "./datasets/iter1/"
     datasets = []
     for idx,file in enumerate(os.listdir(data_path)):
         filename = os.path.join(data_path,file)
@@ -35,7 +35,7 @@ if __name__=="__main__":
     
     processes = []
     for i in range(6):
-        p = mp.Process(target=train,args=(net,datasets,0,500,i))
+        p = mp.Process(target=train,args=(net,datasets,0,200,i))
         p.start()
         processes.append(p)
     for p in processes:

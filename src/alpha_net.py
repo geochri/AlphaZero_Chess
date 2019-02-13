@@ -4,8 +4,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import os
+import datetime
 
 class board_data(Dataset):
     def __init__(self, dataset): # dataset = np.array of (s, p, v)
@@ -26,11 +29,7 @@ class ConvBlock(nn.Module):
         self.bn1 = nn.BatchNorm2d(256)
 
     def forward(self, s):
-        #s: batch_size x channels X board_x x board_y
-        #s = torch.from_numpy(s).float()
-        #print(s.size())
-        s = s.view(-1, 22, 8, 8)
-        #print(s.size())                                     # batch_size x channels x board_x x board_y
+        s = s.view(-1, 22, 8, 8)  # batch_size x channels x board_x x board_y
         s = F.relu(self.bn1(self.conv1(s)))
         return s
 
@@ -101,19 +100,17 @@ class AlphaLoss(torch.nn.Module):
 
     def forward(self, y_value, value, y_policy, policy):
         value_error = (value - y_value) ** 2
-        #print(policy[0,3509],y_policy[0,3509])
         policy_error = torch.sum((-policy* 
                                 (1e-6 + y_policy.float()).float().log()), 1)
         total_error = (value_error.view(-1).float() + policy_error).mean()
-        #print(value_error); print(policy_error); print(total_error)
         return total_error
     
-def train(net, dataset, epoch_start=0, epoch_stop=500, cpu=0):
+def train(net, dataset, epoch_start=0, epoch_stop=20, cpu=0):
     torch.manual_seed(cpu)
     cuda = torch.cuda.is_available()
     net.train()
     criterion = AlphaLoss()
-    optimizer = optim.Adam(net.parameters(), lr=0.01)
+    optimizer = optim.Adam(net.parameters(), lr=0.003)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100,200,300,400], gamma=0.2)
     
     train_set = board_data(dataset)
@@ -128,14 +125,12 @@ def train(net, dataset, epoch_start=0, epoch_stop=500, cpu=0):
             if cuda:
                 state, policy, value = state.cuda().float(), policy.float().cuda(), value.cuda().float()
             optimizer.zero_grad()
-            # state = torch.Size([batch, 22, 8, 8]); policy = torch.Size([batch, 4672]) # value = torch.Size([batch])
             policy_pred, value_pred = net(state) # policy_pred = torch.Size([batch, 4672]) value_pred = torch.Size([batch, 1])
-            #print(value_pred); print(value); print(policy_pred); print(policy)
             loss = criterion(value_pred[:,0], value, policy_pred, policy)
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-            if i % 10 == 9:    # print every 1000 mini-batches of size = batch_size
+            if i % 10 == 9:    # print every 10 mini-batches of size = batch_size
                 print('Process ID: %d [Epoch: %d, %5d/ %d points] total loss per batch: %.3f' %
                       (os.getpid(), epoch + 1, (i + 1)*30, len(train_set), total_loss/10))
                 print("Policy:",policy[0].argmax().item(),policy_pred[0].argmax().item())
@@ -143,10 +138,10 @@ def train(net, dataset, epoch_start=0, epoch_stop=500, cpu=0):
                 losses_per_batch.append(total_loss/10)
                 total_loss = 0.0
         losses_per_epoch.append(sum(losses_per_batch)/len(losses_per_batch))
-        if len(losses_per_epoch) > 50:
-            if abs(losses_per_epoch[-4:-1]/3-losses_per_epoch[-13:-10]/3) <= 0.03:
+        if len(losses_per_epoch) > 100:
+            if abs(sum(losses_per_epoch[-4:-1])/3-sum(losses_per_epoch[-16:-13])/3) <= 0.01:
                 break
-        
+
     fig = plt.figure()
     ax = fig.add_subplot(222)
     ax.scatter([e for e in range(1,epoch_stop+1,1)], losses_per_epoch)
@@ -154,5 +149,5 @@ def train(net, dataset, epoch_start=0, epoch_stop=500, cpu=0):
     ax.set_ylabel("Loss per batch")
     ax.set_title("Loss vs Epoch")
     print('Finished Training')
-    
-    
+    plt.savefig(os.path.join("./model_data/", "Loss_vs_Epoch_%s.png" % datetime.datetime.today().strftime("%Y-%m-%d")))
+
