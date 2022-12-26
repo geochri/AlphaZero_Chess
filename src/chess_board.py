@@ -612,14 +612,40 @@ class board():
         if self.player == 0:
             c_list,_ = self.possible_B_moves(threats=True)
             king_position = np.where(self.current_board=="K")
+            opposite_king_position = np.where(self.current_board == "k")
             i, j = king_position
-            if (i,j) in c_list:
+            x, y = opposite_king_position
+            x, y = x[0], y[0]
+            kings_encroaching = False
+            if (i, j) in [(x + 1, y),
+                          (x - 1, y),
+                          (x, y + 1),
+                          (x, y - 1),
+                          (x + 1, y + 1),
+                          (x - 1, y - 1),
+                          (x + 1, y - 1),
+                          (x - 1, y + 1)]:
+                kings_encroaching = True
+            if (i,j) in c_list or kings_encroaching:
                 return True
         elif self.player == 1:
             c_list,_ = self.possible_W_moves(threats=True)
             king_position = np.where(self.current_board=="k")
+            opposite_king_position = np.where(self.current_board == "K")
             i, j = king_position
-            if (i,j) in c_list:
+            x, y = opposite_king_position
+            x, y = x[0], y[0]
+            kings_encroaching = False
+                        if (i, j) in [(x + 1, y),
+                          (x - 1, y),
+                          (x, y + 1),
+                          (x, y - 1),
+                          (x + 1, y + 1),
+                          (x - 1, y - 1),
+                          (x + 1, y - 1),
+                          (x - 1, y + 1)]:
+                kings_encroaching = True
+            if (i,j) in c_list or kings_encroaching:
                 return True
         return False
     
