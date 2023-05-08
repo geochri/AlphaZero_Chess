@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+
+from alpha_net import ChessNet, train
+import os
+import pickle
+import numpy as np
+import torch
+
 def train_chessnet(net_to_train="current_net_trained7_iter1.pth.tar",save_as="current_net_trained8_iter1.pth.tar"):
     # gather data
     data_path = "./datasets/iter1/"
