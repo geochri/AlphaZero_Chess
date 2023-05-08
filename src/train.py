@@ -1,11 +1,3 @@
-#!/usr/bin/env python
-
-from alpha_net import ChessNet, train
-import os
-import pickle
-import numpy as np
-import torch
-
 def train_chessnet(net_to_train="current_net_trained7_iter1.pth.tar",save_as="current_net_trained8_iter1.pth.tar"):
     # gather data
     data_path = "./datasets/iter1/"
@@ -19,8 +11,9 @@ def train_chessnet(net_to_train="current_net_trained7_iter1.pth.tar",save_as="cu
     data_path = "./datasets/iter0/"
     for idx,file in enumerate(os.listdir(data_path)):
         filename = os.path.join(data_path,file)
-        with open(filename, 'rb') as fo:
-            datasets.extend(pickle.load(fo, encoding='bytes'))
+        if os.path.isfile(filename):
+            with open(filename, 'rb') as fo:
+                datasets.extend(pickle.load(fo, encoding='bytes'))
     
     datasets = np.array(datasets)
     
@@ -39,5 +32,6 @@ def train_chessnet(net_to_train="current_net_trained7_iter1.pth.tar",save_as="cu
     # save results
     torch.save({'state_dict': net.state_dict()}, os.path.join("./model_data/",\
                                     save_as))
+
 if __name__=="__main__":
     train_chessnet()
