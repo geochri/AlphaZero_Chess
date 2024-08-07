@@ -514,7 +514,10 @@ class board():
             next_positions.append((7,6))
         return next_positions
     
-    def move_piece(self,initial_position,final_position,promoted_piece="Q"):
+    def move_piece(self,initial_position,final_position,promoted_piece="queen"):
+        promoted_piece=promoted_piece[:1].lower()
+        if promoted_piece=="k":
+            promoted_piece="n"
         if self.player == 0:
             promoted = False
             i, j = initial_position
@@ -533,8 +536,8 @@ class board():
                     self.en_passant = j; self.en_passant_move = self.move_count
                 if abs(y-j) == 1 and self.current_board[i,j] == " ": # En passant capture
                     self.current_board[i+1,j] = " "
-                if i == 0 and promoted_piece in ["R","B","N","Q"]:
-                    self.current_board[i,j] = promoted_piece
+                if i == 0 and promoted_piece in ["r","b","n","q"]:
+                    self.current_board[i,j] = promoted_piece.upper()
                     promoted = True
             if promoted == False:
                 self.current_board[i,j] = piece
